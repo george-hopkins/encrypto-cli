@@ -1,0 +1,31 @@
+language: csharp
+
+sudo: required
+dist: trusty
+
+solution: Encrypto.Cli.sln
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y innoextract
+
+install:
+  - wget -O Encrypto.exe "https://dl.devmate.com/com.macpaw.win.Encrypto/EncryptoforWin.exe"
+  - mkdir -p installer && (cd installer && innoextract ../Encrypto.exe)
+  - cp installer/app/zlib.net.dll lib
+  - nuget restore Encrypto.Cli.sln
+  - xbuild Encrypto.Cli.sln /t:Encrypto_Core_Patcher
+  - ./Encrypto.Core.Patcher/bin/Debug/Encrypto.Core.Patcher.exe installer/app/Encrypto.Core.dll lib/Encrypto.Core.dll
+
+before_script:
+  - mkdir -p a/b/c/d
+  - mkdir -p a/e/f
+  - dd if=/dev/urandom of=a/b/c/d/file1.img bs=1M count=10
+  - echo "Hello World!" > a/file2.txt
+
+script:
+  - xbuild Encrypto.Cli.sln
+  - ENCRYPTO_PASSWORD=123123 ./Encrypto.Cli/bin/Debug/Encrypto.Cli.exe encrypt test.crypto a
+  - mkdir -p b
+  - ENCRYPTO_PASSWORD=123123 ./Encrypto.Cli/bin/Debug/Encrypto.Cli.exe decrypt --directory=b test.crypto
+  - diff -qr a/ b/
